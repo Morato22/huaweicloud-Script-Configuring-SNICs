@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Defining the path of the script and the service
+script_path="/home/cfg_vlan.sh"
+service_path="/etc/systemd/system/cfg_vlan.service"
+
+# Creating the Script
+cat << 'EOF' > $script_path
+
+#!/bin/bash
+
 # Create a VLAN sub-interface for eth0.
 ip link add link eth0 name eth0.979 type vlan id 979
 
@@ -282,4 +291,35 @@ ip netns exec ns3417 ifconfig eth0.3417 up
 ip netns exec ns3417 ip addr add 192.168.4.135/22 dev eth0.3417
 
 # Configure the default route for the VLAN sub-interface. 192.168.4.1 is the gateway of the subnet that the supplementary network interface works.
-ip netns exec ns3417 ip route add default via 192.168.4.1 
+ip netns exec ns3417 ip route add default via 192.168.4.1
+EOF
+
+# Giving permmission to the Script
+chmod +x $script_path
+
+# Creating the service file
+cat << EOF > $service_path
+[Unit]
+Description=VLAN Configuration
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=$script_path
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Reloading Daemon
+sudo systemctl daemon-reload
+
+# Starting the service
+sudo systemctl start cfg_vlan
+
+# Enable the service
+sudo systemctl enable cfg_vlan
+
+# Reboot the system
+sudo reboot
